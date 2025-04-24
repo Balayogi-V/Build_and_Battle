@@ -1,0 +1,32 @@
+name: build_and_battle
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.5.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^9.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/soldiers/spawn.png
+    - assets/soldiers/uniform.png
+    - assets/soldiers/helmet.png
+    - assets/soldiers/gun.png
+    - assets/soldiers/bullet.png
+    - assets/soldiers/shoot.png
+  fonts:
+    - family: Gomarice
+      fonts:
+        - asset: assets/fonts/gomarice_no_continue.ttf
+        - asset: assets/fonts/gomarice_no_continue.ttf
