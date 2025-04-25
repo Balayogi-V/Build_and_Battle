@@ -24,7 +24,7 @@ class BuiltAndBattleApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: ThemeData(
-        fontFamily: 'Gomarice',
+        fontFamily: 'ClashGrotesk',
         primarySwatch: Colors.yellow,
         scaffoldBackgroundColor: Colors.black,
       ),

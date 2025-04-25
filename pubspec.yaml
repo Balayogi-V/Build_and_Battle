@@ -30,3 +30,11 @@ flutter:
       fonts:
         - asset: assets/fonts/gomarice_no_continue.ttf
         - asset: assets/fonts/gomarice_no_continue.ttf
+    - family: ClashGrotesk
+      fonts:
+        - asset: assets/fonts/ClashGrotesk-Bold.otf
+        - asset: assets/fonts/ClashGrotesk-Extralight.otf
+        - asset: assets/fonts/ClashGrotesk-Light.otf
+        - asset: assets/fonts/ClashGrotesk-Medium.otf
+        - asset: assets/fonts/ClashGrotesk-Regular.otf
+        - asset: assets/fonts/ClashGrotesk-Semibold.otf

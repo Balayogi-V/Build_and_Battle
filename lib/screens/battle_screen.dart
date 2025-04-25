@@ -5,15 +5,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:build_and_battle/models/player.dart';
 
+class FontManager {
+  static const String fontFamily = "ClashGrotesk";
+}
+
 class BattleScreen extends StatelessWidget {
   final List<Player> players;
+  final int numberOfSoldiers;
 
-  const BattleScreen({super.key, required this.players});
+  const BattleScreen({
+    super.key,
+    required this.players,
+    required this.numberOfSoldiers,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => BattleBloc(players),
+      create: (_) => BattleBloc(players, numberOfSoldiers),
       child: const _BattleView(),
     );
   }
@@ -61,13 +70,21 @@ class _BattleViewState extends State<_BattleView> {
       child: Scaffold(
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         floatingActionButton: BlocBuilder<BattleBloc, BattleState>(
-          buildWhen: (previous, current) => current is PlayerTurnStarted,
+          buildWhen: (previous, current) =>
+              current is PlayerTurnStarted || current is GenerateRandom,
           builder: (context, state) {
             return BlinkingPlayButton(state: state);
           },
         ),
         backgroundColor: Colors.black,
-        body: BlocBuilder<BattleBloc, BattleState>(
+        body: BlocConsumer<BattleBloc, BattleState>(
+          listener: (context, state) {
+            if (state is PlayerTurnStarted) {
+              context
+                  .read<BattleBloc>()
+                  .add(RequestTurnAction(state.currentPlayerIndex));
+            }
+          },
           buildWhen: (previous, current) => current is PlayerBattleInfoState,
           builder: (context, state) {
             if (state is PlayerBattleInfoState) {
@@ -91,145 +108,396 @@ class _BattleViewState extends State<_BattleView> {
   Widget _buildPlayerList(BuildContext context, List<Player> players) {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 40, right: 15, left: 15),
-          child: Stack(
-            alignment: AlignmentDirectional.centerEnd,
-            children: [
-              IconButton(
-                icon:
-                    Icon(Icons.settings, color: Colors.black.withOpacity(0.5)),
-                onPressed: null,
-              ),
-              const Row(
-                children: [
-                  Expanded(
-                    child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "🛠️",
-                            style: TextStyle(
-                              fontSize: 25,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            "BUILD & BATTLE",
-                            style: TextStyle(
-                              fontFamily: "Gomarice",
-                              color: Colors.black,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 30,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            "🎯",
-                            style: TextStyle(
-                              fontSize: 25,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        const GameTitle(),
         Expanded(
           child: ListView(
-            physics: const NeverScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             children: players.map((player) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Text(
-                          player.name,
-                          style: const TextStyle(
-                            fontFamily: "Gomarice",
-                            color: Colors.black,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      const SizedBox(width: 4),
-                      Row(
-                        children:
-                            List.generate(player.soldiers.length, (index) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2),
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: player.soldiers[index].isDead
-                                    ? Colors.green
-                                    : Colors.red,
-                                border: Border.all(
-                                  color: Colors.black,
-                                  width: 0.5,
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    child: Row(
-                      children: player.soldiers.asMap().entries.map((entry) {
-                        return Expanded(
-                          child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 4.0),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.yellowAccent,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.black,
-                                  width: 1,
-                                  style: BorderStyle.solid,
-                                ),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(5),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.asset(
-                                    SoldierAssets.getAsset(
-                                        SoldierEvolution.uniform),
-                                    fit: BoxFit.fitHeight,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
+              return PlayerSoltsWidget(
+                player: player,
               );
             }).toList(),
           ),
         ),
       ],
+    );
+  }
+
+  Padding gameTitle() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 40, right: 15, left: 15),
+      child: Stack(
+        alignment: AlignmentDirectional.centerEnd,
+        children: [
+          // Hamburger Button (Right Side)
+          GestureDetector(
+            onTap: () {},
+            child: Container(
+              height: 50,
+              width: 50,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 6,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Outline
+                  Text(
+                    '☰',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: FontManager.fontFamily,
+                      foreground: Paint()
+                        ..style = PaintingStyle.stroke
+                        ..strokeWidth = 3.5
+                        ..color = Colors.black,
+                    ),
+                  ),
+                  // Gradient Fill
+                  ShaderMask(
+                    blendMode: BlendMode.srcIn,
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [Colors.yellow, Colors.orangeAccent],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ).createShader(bounds),
+                    child: const Text(
+                      '☰',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: FontManager.fontFamily,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Game Title (Centered)
+          Center(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Stroke text
+                Text(
+                  "BUILD & BATTLE",
+                  style: TextStyle(
+                    fontFamily: FontManager.fontFamily,
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    foreground: Paint()
+                      ..style = PaintingStyle.stroke
+                      ..strokeWidth = 4
+                      ..color = Colors.black,
+                  ),
+                ),
+                // Gradient text
+                ShaderMask(
+                  blendMode: BlendMode.srcIn,
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Colors.yellow, Colors.orangeAccent],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ).createShader(bounds),
+                  child: const Text(
+                    "BUILD & BATTLE",
+                    style: TextStyle(
+                      fontFamily: FontManager.fontFamily,
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class GameTitle extends StatefulWidget {
+  const GameTitle({super.key});
+
+  @override
+  State<GameTitle> createState() => _GameTitleState();
+}
+
+class _GameTitleState extends State<GameTitle> {
+  double _scale = 1.0;
+
+  void _onTapDown(_) {
+    setState(() => _scale = 0.9); // Shrink a bit on tap down
+  }
+
+  void _onTapUp(_) {
+    setState(() => _scale = 1.0); // Back to normal
+  }
+
+  void _onTapCancel() {
+    setState(() => _scale = 1.0); // Reset if tap canceled
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 40, right: 15, left: 15),
+      child: Stack(
+        alignment: AlignmentDirectional.centerEnd,
+        children: [
+          // Hamburger Icon with InkWell and Scale
+          AnimatedScale(
+            scale: _scale,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {},
+                onTapDown: _onTapDown,
+                onTapUp: _onTapUp,
+                onTapCancel: _onTapCancel,
+                child: Container(
+                  height: 40,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 6,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Stroke
+                      Text(
+                        '☰',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: FontManager.fontFamily,
+                          foreground: Paint()
+                            ..style = PaintingStyle.stroke
+                            ..strokeWidth = 3.5
+                            ..color = Colors.black,
+                        ),
+                      ),
+                      // Gradient Fill
+                      ShaderMask(
+                        blendMode: BlendMode.srcIn,
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: [Colors.yellow, Colors.orangeAccent],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ).createShader(bounds),
+                        child: const Text(
+                          '☰',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: FontManager.fontFamily,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Title in Center
+          Center(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Text(
+                  "BUILD & BATTLE",
+                  style: TextStyle(
+                    fontFamily: FontManager.fontFamily,
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    foreground: Paint()
+                      ..style = PaintingStyle.stroke
+                      ..strokeWidth = 4
+                      ..color = Colors.black,
+                  ),
+                ),
+                ShaderMask(
+                  blendMode: BlendMode.srcIn,
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Colors.yellow, Colors.orangeAccent],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ).createShader(bounds),
+                  child: const Text(
+                    "BUILD & BATTLE",
+                    style: TextStyle(
+                      fontFamily: FontManager.fontFamily,
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class PlayerSoltsWidget extends StatefulWidget {
+  final Player player;
+
+  const PlayerSoltsWidget({
+    super.key,
+    required this.player,
+  });
+
+  @override
+  State<PlayerSoltsWidget> createState() => _PlayerSoltsWidgetState();
+}
+
+class _PlayerSoltsWidgetState extends State<PlayerSoltsWidget> {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildPlayerHeader(),
+        _buildSoldierList(),
+      ],
+    );
+  }
+
+  Widget _buildPlayerHeader() {
+    return Container(
+      padding: const EdgeInsets.only(
+        left: 5,
+        right: 5,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(5),
+        color: widget.player.waitingForTurn
+            ? Colors.white.withOpacity(0.8)
+            : Colors.white.withOpacity(0.5),
+      ),
+      margin: const EdgeInsets.only(bottom: 5),
+      child: Row(
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.person,
+                color: Colors.black,
+                size: 16,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                widget.player.name,
+                style: const TextStyle(
+                  fontFamily: FontManager.fontFamily,
+                  color: Colors.black,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Row(
+            children: widget.player.soldiers.map((soldier) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Icon(
+                  soldier.isDead ? Icons.close : Icons.favorite,
+                  color: soldier.isDead ? Colors.green : Colors.red,
+                  size: 10,
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(width: 5),
+          const Row(
+            children: [
+              Icon(
+                Icons.military_tech,
+                color: Colors.black,
+                size: 14,
+              ),
+              SizedBox(width: 2),
+              Text(
+                "10",
+                style: TextStyle(
+                  fontFamily: FontManager.fontFamily,
+                  color: Colors.black,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSoldierList() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 2.5, right: 2, bottom: 5),
+      child: Row(
+        children: widget.player.soldiers.map((soldier) {
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2.5),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.yellowAccent.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.black.withOpacity(0.5),
+                    width: 1,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(5),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(
+                      SoldierAssets.getAsset(SoldierEvolution.uniform),
+                      fit: BoxFit.fitHeight,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }
@@ -271,13 +539,33 @@ class _BlinkingPlayButtonState extends State<BlinkingPlayButton>
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    if (isPlayerTurn) _controller.repeat(reverse: true);
+    if (isPlayerTurn) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant BlinkingPlayButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Restart animation if the turn changes
+    if (isPlayerTurn && !_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    } else if (!isPlayerTurn && _controller.isAnimating) {
+      _controller.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
       child: Theme(
         data: Theme.of(context).copyWith(
           splashColor: Colors.red.withOpacity(0.3),
@@ -285,23 +573,32 @@ class _BlinkingPlayButtonState extends State<BlinkingPlayButton>
         ),
         child: Material(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           child: InkWell(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(12),
             splashColor: Colors.red.withOpacity(0.3),
             highlightColor: Colors.orange.withOpacity(0.1),
-            onTap: isPlayerTurn ? () {} : null,
+            onTap: isPlayerTurn
+                ? () {
+                    var myState = widget.state;
+                    if (myState is PlayerTurnStarted) {
+                      context
+                          .read<BattleBloc>()
+                          .add(PlayButtonPressed(myState.currentPlayerIndex));
+                    }
+                  }
+                : null,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Cap section
+                // Header text
                 Container(
-                  width: double.infinity,
+                  width: 200,
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   decoration: const BoxDecoration(
                     color: Colors.black,
                     borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(20)),
+                        BorderRadius.vertical(top: Radius.circular(12)),
                   ),
                   child: Center(
                     child: isPlayerTurn
@@ -312,82 +609,47 @@ class _BlinkingPlayButtonState extends State<BlinkingPlayButton>
                                 scale: _scaleAnimation.value,
                                 child: Opacity(
                                   opacity: _opacityAnimation.value,
-                                  child: Text.rich(
-                                    TextSpan(
-                                      children: [
-                                        const TextSpan(
-                                          text: "It's ",
-                                          style: TextStyle(
-                                            fontSize: 20,
-                                            fontFamily: "Gomarice",
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        TextSpan(
-                                          text: playerName,
-                                          style: const TextStyle(
-                                            fontSize: 24,
-                                            fontFamily: "Gomarice",
-                                            color: Colors.redAccent,
-                                            shadows: [
-                                              Shadow(
-                                                blurRadius: 10,
-                                                color: Colors.redAccent,
-                                                offset: Offset(0, 0),
-                                              )
-                                            ],
-                                          ),
-                                        ),
-                                        const TextSpan(
-                                          text: "'s turn",
-                                          style: TextStyle(
-                                            fontSize: 20,
-                                            fontFamily: "Gomarice",
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ],
+                                  child: Text(
+                                    "It's $playerName's turn",
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontFamily: FontManager.fontFamily,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
                               );
                             },
                           )
-                        : ShaderMask(
-                            shaderCallback: (bounds) => const LinearGradient(
-                              colors: [Colors.white30, Colors.white],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ).createShader(bounds),
-                            child: const Text(
-                              "Loading...",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontFamily: "Gomarice",
-                                color: Colors.white,
-                              ),
+                        : const Text(
+                            "Loading...",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontFamily: FontManager.fontFamily,
+                              color: Colors.white,
                             ),
                           ),
                   ),
                 ),
+                // Bottom button
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 400),
-                  width: double.infinity,
+                  width: 200,
                   decoration: const BoxDecoration(
                     color: Colors.yellow,
                     borderRadius:
-                        BorderRadius.vertical(bottom: Radius.circular(20)),
+                        BorderRadius.vertical(bottom: Radius.circular(12)),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 5),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (!isPlayerTurn)
                         const Padding(
-                          padding: EdgeInsets.only(right: 8.0),
+                          padding: EdgeInsets.only(right: 6.0),
                           child: SizedBox(
-                            width: 18,
-                            height: 18,
+                            width: 14,
+                            height: 14,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.white,
@@ -397,11 +659,10 @@ class _BlinkingPlayButtonState extends State<BlinkingPlayButton>
                       Text(
                         isPlayerTurn ? "PLAY" : "Please wait...",
                         style: const TextStyle(
-                          fontSize: 35,
-                          fontFamily: "Gomarice",
+                          fontSize: 18,
+                          fontFamily: FontManager.fontFamily,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
-                          letterSpacing: 1.2,
                         ),
                       ),
                     ],

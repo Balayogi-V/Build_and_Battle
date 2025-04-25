@@ -8,8 +8,13 @@ class StartTurnEvent extends BattleEvent {
 }
 
 class RequestTurnAction extends BattleEvent {
-  final String playerId;
-  RequestTurnAction(this.playerId);
+  final int playerIndex;
+  RequestTurnAction(this.playerIndex);
+}
+
+class PlayButtonPressed extends BattleEvent {
+  final int playerIndex;
+  PlayButtonPressed(this.playerIndex);
 }
 
 class EvolveSoldier extends BattleEvent {

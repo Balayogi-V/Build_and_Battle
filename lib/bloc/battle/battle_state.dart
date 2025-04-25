@@ -14,6 +14,16 @@ class PlayerTurnStarted extends BattleState {
       {required this.currentPlayer, required this.currentPlayerIndex});
 }
 
+class GenerateRandom extends BattleState {
+  final Player currentPlayer;
+  final int currentPlayerIndex;
+  final String message;
+  GenerateRandom(
+      {required this.message,
+      required this.currentPlayer,
+      required this.currentPlayerIndex});
+}
+
 class SoldierEvolved extends BattleState {
   final Player currentPlayer;
   final int soldierIndex;

@@ -5,8 +5,13 @@ import 'package:build_and_battle/screens/battle_screen.dart';
 
 class SetupScreen extends StatefulWidget {
   final int numberOfPlayers;
+  final bool isFiveSoldiers;
 
-  const SetupScreen({super.key, required this.numberOfPlayers});
+  const SetupScreen({
+    super.key,
+    required this.numberOfPlayers,
+    required this.isFiveSoldiers,
+  });
 
   @override
   State<SetupScreen> createState() => _SetupScreenState();
@@ -14,10 +19,12 @@ class SetupScreen extends StatefulWidget {
 
 class _SetupScreenState extends State<SetupScreen> {
   late List<TextEditingController> _nameControllers;
+  late int numberOfSoldiers;
 
   @override
   void initState() {
     super.initState();
+    numberOfSoldiers = widget.isFiveSoldiers ? 5 : 4;
     _nameControllers = List.generate(
       widget.numberOfPlayers,
       (_) => TextEditingController(),
@@ -34,6 +41,8 @@ class _SetupScreenState extends State<SetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final maxPlayers = widget.isFiveSoldiers ? 5 : 4;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Game Setup')),
       body: Padding(
@@ -59,21 +68,39 @@ class _SetupScreenState extends State<SetupScreen> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
+                if (widget.numberOfPlayers > maxPlayers) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Maximum players allowed is $maxPlayers for this mode.'),
+                    ),
+                  );
+                  return;
+                }
+
                 final players = List.generate(
                   widget.numberOfPlayers,
-                  (index) => Player(
-                    id: DateTime.now().millisecondsSinceEpoch.toString() +
-                        index.toString(),
-                    name: _nameControllers[index].text.isNotEmpty
-                        ? _nameControllers[index].text
-                        : 'Player ${index + 1}',
-                    soldiers: List.generate(4, (_) => Soldier()),
-                  ),
+                  (index) {
+                    return Player(
+                      id: DateTime.now().millisecondsSinceEpoch.toString() +
+                          index.toString(),
+                      name: _nameControllers[index].text.isNotEmpty
+                          ? _nameControllers[index].text
+                          : 'Player ${index + 1}',
+                      soldiers: List.generate(
+                        numberOfSoldiers,
+                        (_) => Soldier(),
+                      ),
+                    );
+                  },
                 );
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => BattleScreen(players: players),
+                    builder: (context) => BattleScreen(
+                      players: players,
+                      numberOfSoldiers: numberOfSoldiers,
+                    ),
                   ),
                 );
               },
